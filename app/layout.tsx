@@ -28,6 +28,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.BETTER_AUTH_URL || "http://localhost:3000"),
   title: "Arzur Sanctum.",
   description: "A digital studio. By Arzur.",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 export default function RootLayout({
   children,
