@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          String    @default("admin")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Profile {
+  id                String   @id @default("main")
+  displayName       String   @default("Your name")
+  username          String   @default("yourname")
+  bio               String   @default("A little about you goes here.")
+  status            String?
+  avatarUrl         String?
+  bannerUrl         String?
+  musicUrl          String?
+  trackTitle        String?
+  trackArtist       String?
+  socialLinks       Json     @default("[]")
+  gamingSetup       Json     @default("{}")
+  favoriteGames     Json     @default("[]")
+  discordId         String?
+  steamId           String?
+  seoTitle          String   @default("Personal profile")
+  seoDescription    String   @default("A personal profile and links.")
+  publicMessages    Boolean  @default(false)
+  messagesEnabled   Boolean  @default(true)
+  analyticsEnabled  Boolean  @default(true)
+  retentionDays     Int      @default(90)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  themes            Theme[]
+  messages          Message[]
+  events            AnalyticsEvent[]
+}
+
+model Theme {
+  id              String   @id @default(cuid())
+  profileId       String
+  profile         Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name            String
+  configuration   Json
+  previewImageUrl String?
+  isActive        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([profileId])
+}
+
+enum MessageStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Message {
+  id          String        @id @default(cuid())
+  profileId   String
+  profile     Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  content     String        @db.VarChar(1000)
+  status      MessageStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  moderatedAt DateTime?
+
+  @@index([status, createdAt])
+  @@index([profileId, createdAt])
+}
+
+enum EventType {
+  profile_view
+  social_link_click
+}
+
+model AnalyticsEvent {
+  id           String    @id @default(cuid())
+  profileId    String
+  profile      Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  eventType    EventType
+  occurredAt   DateTime  @default(now())
+  pagePath     String    @db.VarChar(100)
+  linkId       String?   @db.VarChar(80)
+  visitorToken String?   @db.VarChar(64)
+
+  @@index([eventType, occurredAt])
+  @@index([visitorToken, occurredAt])
+}
+
+model RateBucket {
+  key       String   @id @db.VarChar(120)
+  count     Int      @default(0)
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+model RateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@map("rateLimit")
+}
